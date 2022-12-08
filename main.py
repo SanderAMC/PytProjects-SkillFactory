@@ -18,7 +18,7 @@ def sap_get_move():
     while True:
         s = input("Введите строку и столбец, куда пойдете (через пробел)?")
         if game_field[int(list(s.split())[0])-1][int(list(s.split())[1])-1] != "_":
-            print("Уже занято!")
+            print("\nУже занято!")
             draw_board()
         else:
             break
