@@ -19,7 +19,14 @@ def draw_board():
 
 def sap_get_move():
     while True:
-        s = input("Введите строку и столбец, куда пойдете (через пробел)?")
+        s = input("Введите строку и столбец 1 .. 3, куда пойдете (через пробел). Ввод 0 означает выход из игры :")
+        if s == "0":
+            break
+
+        if len(s) < 3 or not s[0].isdigit() or not s[2].isdigit() or int(s[0]) > 3 or int(s[2]) > 3:
+            print("Не ошибайтесь при вводе.")
+            continue
+
         if game_field[(int(list(s.split())[0])-1) * 3 + int(list(s.split())[1])-1] != "_":
 
             print("\nУже занято!")
@@ -37,11 +44,35 @@ def comp_get_move():
         weights[max_index] = 0
     else:
         print("Ошибка, что-то с индексами")
-    return
+
+    return max_index
 
 def recalc_weights(sign):
     for i in range(9):
+
+        if i == 0 and game_field[i] == sign:
+            if weights[2] != 0: weights[2] += 1
+            if weights[6] != 0: weights[6] += 1
+            if weights[8] != 0: weights[8] += 2
+            print("Для 0 ячейки обработаны веса.")
+        if i == 2 and game_field[i] == sign:
+            if weights[0] != 0: weights[0] += 1
+            if weights[6] != 0: weights[6] += 2
+            if weights[8] != 0: weights[8] += 1
+            print("Для 2 ячейки обработаны веса.")
+        if i == 6 and game_field[i] == sign:
+            if weights[2] != 0: weights[2] += 2
+            if weights[0] != 0: weights[0] += 1
+            if weights[8] != 0: weights[8] += 1
+            print("Для 6 ячейки обработаны веса.")
+        if i == 8 and game_field[i] == sign:
+            if weights[2] != 0: weights[2] += 2
+            if weights[0] != 0: weights[0] += 1
+            if weights[6] != 0: weights[6] += 1
+            print("Для 8 ячейки обработаны веса.")
+
         if weights[i] != 0:
+            print((i, weights[i]))
             if i > 0 and i // 3 == (i-1) // 3 and game_field[i-1] == sign:
                 print("слева + 1")
                 weights[i] +=1
@@ -55,19 +86,21 @@ def recalc_weights(sign):
                 print("снизу + 1")
                 weights[i] += 1
 
-def check_win():
+
+
+def check_win(board):
     X_ = "X" * 3
     O_ = "O" * 3
     r = []
 
-    r.append("".join(game_field[0:3]))
-    r.append("".join(game_field[3:6]))
-    r.append("".join(game_field[6:9]))
-    r.append("".join(game_field[0:9:3]))
-    r.append("".join(game_field[1:9:3]))
-    r.append("".join(game_field[2:9:3]))
-    r.append("".join(game_field[0:9:4]))
-    r.append("".join(game_field[2:8:2]))
+    r.append("".join(board[0:3]))
+    r.append("".join(board[3:6]))
+    r.append("".join(board[6:9]))
+    r.append("".join(board[0:9:3]))
+    r.append("".join(board[1:9:3]))
+    r.append("".join(board[2:9:3]))
+    r.append("".join(board[0:9:4]))
+    r.append("".join(board[2:8:2]))
 
     if X_ in r:
         return "X"
@@ -81,7 +114,7 @@ def check_win():
 
 if __name__ == "__main__":
 
-    print("Игра 'Крестики - нолики' на поле 3 х 3, с компьютером.")
+    print("Игра 'Крестики - нолики' на поле 3 х 3, с компьютером. \n Ход начинают крестики.")
 
     side = ""
     while side not in ["x", "o", "X", "O"]:
@@ -101,26 +134,32 @@ if __name__ == "__main__":
 
         if sap_move:
             move = sap_get_move()
-            game_field[(int(list(move.split())[0]) - 1) * 3 + (int(list(move.split())[1]) - 1 )] = sap_sign
-            weights[(int(list(move.split())[0]) - 1) * 3 + (int(list(move.split())[1]) - 1 )] = 0
-            recalc_weights(sap_sign)
+            if move == "0":
+                break
+            ind_move = (int(list(move.split())[0]) - 1) * 3 + (int(list(move.split())[1]) - 1 )
+            game_field[ind_move] = sap_sign
+            weights[ind_move] = 0
             sap_move, comp_move = False, True
+            recalc_weights(sap_sign)
             print("Поле после вашего хода:")
             draw_board()
 
         else:
-            comp_get_move()
-            recalc_weights(comp_sign)
+            ind_move = comp_get_move()
             sap_move, comp_move = True, False
+            recalc_weights(comp_sign)
             print("Поле после хода компьютера:")
             draw_board()
 
-        win_condition = check_win()
+        win_condition = check_win(game_field)
 
     if win_condition == comp_sign:
         print("Компьютер победил")
     elif win_condition == sap_sign:
         print("Вы победили. Компьютер позорно слил!")
-    else:
+    elif win_condition == "XO":
         print("Ничья, увы.")
+    else:
+        print("Вы выбрали прервать игру. Вы сдались, а компьютер молодец! До свиданья.")
+
 
