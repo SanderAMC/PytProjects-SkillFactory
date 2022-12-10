@@ -1,21 +1,31 @@
-game_field = ["_", "_", "_", "_", "_", "_", "_", "_", "_"]
-weights = [4, 2, 4, 2, 6, 2, 4, 2, 4]
-win_condition = False
-comp_move, sap_move = False, False
-comp_sign = ""
+import random
 
-def draw_board():
+game_field = ["_", "_", "_", "_", "_", "_", "_", "_", "_"]
+
+win_condition = False
+comp_move = None
+comp_sign = ""
+first_comp_move = True
+
+def draw_board(board):
     print("       1  2  3\n")
     for i in range(3):
         line = "   " + str(i+1) + "  "
         for j in range(3):
-            line += " " + game_field[3 * i + j] + " "
+            line += " " + board[3 * i + j] + " "
 
-        for j in range(3):
-            line += "  " + str(weights[3 * i + j])
         print(line)
     print("\n")
     return
+
+def get_possible_moves(board):
+    possibleMoves = []
+    for i in range(3):
+        for j in range(3):
+            if board[3 * i + j] == "_":
+                possibleMoves.append(3 * i + j)
+    #print("Возможные ходы:", possibleMoves)
+    return possibleMoves
 
 def sap_get_move():
     while True:
@@ -28,65 +38,76 @@ def sap_get_move():
             continue
 
         if game_field[(int(list(s.split())[0])-1) * 3 + int(list(s.split())[1])-1] != "_":
-
             print("\nУже занято!")
-            draw_board()
+            draw_board(game_field)
         else:
             break
     return s
 
-def comp_get_move():
-    max_index = weights.index(max(weights))
-    max_weight = weights[max_index]
-    print("Максимальный вес = ", max_weight)
-    if max_weight != 0:
-        game_field[max_index] = comp_sign
-        weights[max_index] = 0
-    else:
-        print("Ошибка, что-то с индексами")
+def comp_get_move(first_move):
 
-    return max_index
+    # 1. копируем игровое поле
+    # 2. берем список доступных ячеек и идем по нему
+    # 3. делаем ход компа в копию игрового поля в очередную свободную ячейку и запускаем минмакс
+    # 4. в минмакс проверяем победу - если ход компа возвращаем +10; ничья - 0, ход игрока возвращаем -10
+    # 5. если нет победы - берем оставшиеся свободные ячейки и для них запускаем минмакс с ходом другого игрока
+    # 6. вернувшись из минмакс запоминаем очки для этой ячейки списка, отменяем ход, продолжаем п.3
+    # 7. если все свободные ячейки закончились - выбираем максимум очков и номер этой ячейки
 
-def recalc_weights(sign):
-    for i in range(9):
-
-        if i == 0 and game_field[i] == sign:
-            if weights[2] != 0: weights[2] += 1
-            if weights[6] != 0: weights[6] += 1
-            if weights[8] != 0: weights[8] += 2
-            print("Для 0 ячейки обработаны веса.")
-        if i == 2 and game_field[i] == sign:
-            if weights[0] != 0: weights[0] += 1
-            if weights[6] != 0: weights[6] += 2
-            if weights[8] != 0: weights[8] += 1
-            print("Для 2 ячейки обработаны веса.")
-        if i == 6 and game_field[i] == sign:
-            if weights[2] != 0: weights[2] += 2
-            if weights[0] != 0: weights[0] += 1
-            if weights[8] != 0: weights[8] += 1
-            print("Для 6 ячейки обработаны веса.")
-        if i == 8 and game_field[i] == sign:
-            if weights[2] != 0: weights[2] += 2
-            if weights[0] != 0: weights[0] += 1
-            if weights[6] != 0: weights[6] += 1
-            print("Для 8 ячейки обработаны веса.")
-
-        if weights[i] != 0:
-            print((i, weights[i]))
-            if i > 0 and i // 3 == (i-1) // 3 and game_field[i-1] == sign:
-                print("слева + 1")
-                weights[i] +=1
-            if i < 8 and i // 3 == (i+1) // 3 and game_field[i+1] == sign:
-                print("справа + 1")
-                weights[i] +=1
-            if i > 2 and game_field[i-3] == sign:
-                print("сверху + 1")
-                weights[i] += 1
-            if i < 6 and game_field[i+3] == sign:
-                print("снизу + 1")
-                weights[i] += 1
+    if first_move:
+        while True:
+            choice = random.choice(["0", "2", "4", "6", "8"])
+            if game_field[int(choice)] == "_":
+                first_comp_move = False
+                return int(choice)
 
 
+    scores = -10000000
+    board_copy = game_field.copy()
+
+    for i in get_possible_moves(board_copy):
+        board_copy[i] = comp_sign
+        #print("Очередной псевдоход за комп")
+        #draw_board(board_copy)
+        cur_score = minmax(board_copy, False, sap_sign)
+        if cur_score > scores:
+            scores = cur_score
+            index = i
+        board_copy[i] = "_"
+
+    #print(f"Выбран ход с очками {scores} в ячейку {index}")
+    return index
+
+def minmax(board, ismax, sign):
+
+    res = check_win(board)
+    #print("Результат анализа доски ", res)
+    if res in ["X", "O"] and not ismax:
+        #print("Комп псевдопобедил")
+        return 10
+    elif res in ["X", "O"] and ismax:
+        #print("Чел псевдопобедил")
+        return -10
+    elif res == "XO":
+        #print("Псевдоничья")
+        return 0
+
+    minmax_score = []
+    for k in get_possible_moves(board):
+        board[k] = sign
+        if sign == sap_sign:
+            #print("Походил за чела")
+            #draw_board(board)
+            minmax_score.append(minmax(board, not ismax, comp_sign))
+        else:
+            #print("Походил за компа")
+            #draw_board(board)
+            minmax_score.append(minmax(board, not ismax, sap_sign))
+        board[k] = "_"
+        #print("Ответы по весам: ", minmax_score)
+
+    #print("Возвращаем за комп") if ismax else print("Возвращаем за чела")
+    return max(minmax_score) if ismax else min(minmax_score)
 
 def check_win(board):
     X_ = "X" * 3
@@ -106,7 +127,7 @@ def check_win(board):
         return "X"
     elif O_ in r:
         return "O"
-    elif "_" not in game_field:
+    elif "_" not in board:
         return "XO"
 
     return
@@ -123,33 +144,34 @@ if __name__ == "__main__":
     if side in ["X", "x"]:
         print("Вы выбрали игру за Крестики. Ваш ход первый.")
         comp_sign, sap_sign = "O", "X"
-        sap_move, comp_move = True, False
-        draw_board()
+        comp_move = False
+        draw_board(game_field)
     else:
         print("Вы выбрали Нолик. Компьютер делает первый ход!")
         comp_sign, sap_sign = "X", "O"
-        sap_move, comp_move = False, True
+        comp_move = True
 
     while win_condition not in ["X", "O", "XO"]:
 
-        if sap_move:
+        if not comp_move:
             move = sap_get_move()
             if move == "0":
                 break
             ind_move = (int(list(move.split())[0]) - 1) * 3 + (int(list(move.split())[1]) - 1 )
             game_field[ind_move] = sap_sign
-            weights[ind_move] = 0
-            sap_move, comp_move = False, True
-            recalc_weights(sap_sign)
+            comp_move = True
+
             print("Поле после вашего хода:")
-            draw_board()
+            draw_board(game_field)
 
         else:
-            ind_move = comp_get_move()
-            sap_move, comp_move = True, False
-            recalc_weights(comp_sign)
+            ind_move = comp_get_move(first_comp_move)
+            if first_comp_move:
+                first_comp_move = False
+            comp_move = False
+            game_field[ind_move] = comp_sign
             print("Поле после хода компьютера:")
-            draw_board()
+            draw_board(game_field)
 
         win_condition = check_win(game_field)
 
